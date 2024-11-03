@@ -23,9 +23,9 @@ To utilize the LongProf-MSMS-Method and replicate the research results, please f
 2. **Install Required Dependencies**
 
    ```bash
-  conda create -n longprof python=3.8.13
-  conda activate longprof
-  pip install -r src/requirements.txt
+   conda create -n longprof python=3.8.13
+   conda activate longprof
+   pip install -r src/requirements.txt
 
 3. **Run the Code **
 Run every cell of "src/code/longprof_msms_method.ipynb" in sequence in Jupyter Notebook. Make sure that the data set is stored in the same path as specified in the script.
