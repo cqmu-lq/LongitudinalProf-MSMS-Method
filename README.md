@@ -4,7 +4,6 @@
 
 This repository contains the dataset and code for the paper titled "Longitudinal Profiling of MS/MS Fragments for Metabolite Identification". The project focuses on developing and validating methods for accurate metabolite identification using longitudinal profiling of MS/MS fragments.
 
-<img src="https://github.com/yourusername/LongProf-MSMS-Method/blob/main/src/img/longprof.png" alt="LongProf"/><br/>
 
 ## Data Availability
 The data used in this study, together with the software code, have been made accessible in this repository to ensure transparency and reproducibility of the findings. The following files are included:
