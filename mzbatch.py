@@ -1,35 +1,36 @@
-import os,subprocess,pickle
+import os, subprocess, pickle
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from pyopenms import MSExperiment,MzMLFile,PeakPickerHiRes
+from pyopenms import MSExperiment, MzMLFile, PeakPickerHiRes
 import pymzml
 
-# 本文件为公共方法，分为以下模块：文件读写，数据检查，数据生成，数据计算，数据提取
+# This file contains common methods, divided into the following modules: file reading/writing, data checking, data generation, data calculation, and data extraction
 
 """=============================
-文件读写
+File Reading/Writing
 """
-# 文件复制
+# File copy
 import shutil
-def copyfile(infile,outfile):
+def copyfile(infile, outfile):
     outdir = os.path.dirname(outfile)
     if not os.path.exists(outdir):
         makedir(outdir)
         while True:
             if os.path.exists(outdir):
                 break
-    shutil.copy(infile,outfile)
+    shutil.copy(infile, outfile)
     
-# 创建文件夹：文件夹不存在则创建
+# Create folder: create if it does not exist
 def makedir(path):
     if not os.path.exists(path):
         subprocess.Popen('mkdir "{}"'.format(path), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
 def make_folder(folder_path):
     if not os.path.exists(folder_path):
-            os.makedirs(folder_path)
+        os.makedirs(folder_path)
 
-# 文件路径是否存在: 不存在创建，创建好了才返回True
+# Check if the file path exists: if not, create it, and return True after creation
 def dir_is_exist(filepath):
     if os.path.exists(filepath):
         return True
@@ -40,196 +41,199 @@ def dir_is_exist(filepath):
                 break
         return True
 
-# 写入pickle文件
-def to_pkl(data,w_path):
-    with open(w_path,'wb') as f:
-        pickle.dump(data,f)
-# 读取pickle文件
+# Write to a pickle file
+def to_pkl(data, w_path):
+    with open(w_path, 'wb') as f:
+        pickle.dump(data, f)
+
+# Read a pickle file
 def read_pkl(r_path):
     with open(r_path, 'rb') as f:
-        data=pickle.load(f)
+        data = pickle.load(f)
     return data
         
-# 读取mzML数据
+# Read mzML data
 def readmzML(filepath):
-    exp=MSExperiment()
+    exp = MSExperiment()
     MzMLFile().load(filepath, exp)
     return exp
 
-# 解析mzML文件
-def get_TIC_from_File(file_path,tic_pkl):
+# Parse the mzML file
+def get_TIC_from_File(file_path, tic_pkl):
     '''
-    return [ {'rt','scanID',,,,},    ]
+    return [ {'rt', 'scanID',,,,},    ]
     '''
     if os.path.exists(tic_pkl):
         TIC = read_pkl(tic_pkl)
     else:
-        # print(type(file_path))
-        # 载入文件
-        if isinstance(file_path,str):
-            exp=MSExperiment()
+        # Load the file
+        if isinstance(file_path, str):
+            exp = MSExperiment()
             MzMLFile().load(file_path, exp)
-        elif isinstance(file_path,MSExperiment):
-            exp=file_path
+        elif isinstance(file_path, MSExperiment):
+            exp = file_path
         else:
             return
 
-        profiled_exp=MSExperiment()
-        temp_cen_list=[]
+        profiled_exp = MSExperiment()
+        temp_cen_list = []
         for spec in exp:
-            if spec.getType()==2:
+            if spec.getType() == 2:
                 profiled_exp.addSpectrum(spec)
             else:
                 temp_cen_list.append(spec)
-        # 归一化数据
+        
+        # Normalize data
         centroided_exp = MSExperiment()
-        if profiled_exp.size()>0:
+        if profiled_exp.size() > 0:
             PeakPickerHiRes().pickExperiment(exp, centroided_exp)
 
-        # print("centroided_exp.size()  ",centroided_exp.size())
-        # print( "len(temp_cen_list) ",len(temp_cen_list))
-        if len(temp_cen_list)>0:
+        if len(temp_cen_list) > 0:
             for spec in temp_cen_list:
                 centroided_exp.addSpectrum(spec)
         centroided_exp.sortSpectra()
-        # print("centroided_exp.size()  ",centroided_exp.size())
         
-        # pymzml读，获取isolation window target m/z
+        # Read with pymzml to get isolation window target m/z
         TIC2 = pymzml.run.Reader(file_path)
 
-        TIC=[]
-        for idx,spec in enumerate( centroided_exp):
-            spectrum={}
-            spectrum['ID']=idx+1
-            spectrum['RT']=spec.getRT()
-            spectrum['Polarity']=spec.getInstrumentSettings().getPolarity()
-            spectrum['MSlevel']=spec.getMSLevel()
-            cur_id = idx if spectrum['MSlevel']==1 else cur_id
-            cur_RT = spectrum['RT'] if spectrum['MSlevel']==1 else cur_RT
-            spectrum['MS1_id']=cur_id if spectrum['MSlevel']==2 else None
-            spectrum['MS1_RT']=cur_RT if spectrum['MSlevel']==2 else None
-            # spectrum['pecursor']= None if spectrum['MSlevel']==1 else spec.getPrecursors()[0].getMZ()
+        TIC = []
+        for idx, spec in enumerate(centroided_exp):
+            spectrum = {}
+            spectrum['ID'] = idx + 1
+            spectrum['RT'] = spec.getRT()
+            spectrum['Polarity'] = spec.getInstrumentSettings().getPolarity()
+            spectrum['MSlevel'] = spec.getMSLevel()
+            cur_id = idx if spectrum['MSlevel'] == 1 else cur_id
+            cur_RT = spectrum['RT'] if spectrum['MSlevel'] == 1 else cur_RT
+            spectrum['MS1_id'] = cur_id if spectrum['MSlevel'] == 2 else None
+            spectrum['MS1_RT'] = cur_RT if spectrum['MSlevel'] == 2 else None
             
-            # 就修改这一句
-            spectrum['pecursor']= None if spectrum['MSlevel']==1 else TIC2[idx+1]['MS:1000827'] 
+            # Modify this line
+            spectrum['pecursor'] = None if spectrum['MSlevel'] == 1 else TIC2[idx + 1]['MS:1000827'] 
             
-            # spectrum['up_offset']= None if spectrum['MSlevel']==1 else spec.getPrecursors()[0].getIsolationWindowUpperOffset()
-            # spectrum['low_offset']= None if spectrum['MSlevel']==1 else spec.getPrecursors()[0].getIsolationWindowLowerOffset()
-            spectrum['peaks']=list(zip(*spec.get_peaks()))
-            spectrum['TIC']=np.sum(np.array(spectrum['peaks'])[:,1])
+            spectrum['peaks'] = list(zip(*spec.get_peaks()))
+            spectrum['TIC'] = np.sum(np.array(spectrum['peaks'])[:, 1])
             TIC.append(spectrum)
-        # print(list(zip(*centroided_exp[1].get_peaks())))
-        to_pkl(TIC,tic_pkl)
+        
+        to_pkl(TIC, tic_pkl)
     return TIC
 
-# 合并文件夹下的所有csv结果
-def marge_data_fun(folder_path,qianzhui,begin_0,end_0,step_0,outfile):
-    all_files_list = ["{}/{}_{}_{}.csv".format(folder_path,qianzhui,i,i+step_0) for i in range(begin_0,end_0,step_0)]
+# Merge all CSV results in the folder
+def marge_data_fun(folder_path, qianzhui, begin_0, end_0, step_0, outfile):
+    all_files_list = ["{}/{}_{}_{}.csv".format(folder_path, qianzhui, i, i + step_0) for i in range(begin_0, end_0, step_0)]
     merged_data_df = pd.DataFrame()
     for file in all_files_list:
-        df = pd.read_csv(file,index_col=0)
+        df = pd.read_csv(file, index_col=0)
         merged_data_df = pd.concat([merged_data_df, df], ignore_index=True)
     print(merged_data_df.shape, outfile)
-    merged_data_df.to_excel(outfile,encoding='utf8')
-"""=============================
-数据检查
+    merged_data_df.to_excel(outfile, encoding='utf8')
+"""
+=============================
+Data Checking
 """
 
-# 数据校验：1. 统计一二级谱图数量；2. 检查是不是每个一级谱图后面都有4个二级谱图
+# Data validation: 1. Count the number of MS1 and MS2 spectra; 2. Check if each MS1 spectrum is followed by 4 MS2 spectra
 def check_data(tic_list):
-    # 统计一二级谱图数量
-    MS1_count,MS2_count=0,0
+    # Count the number of MS1 and MS2 spectra
+    MS1_count, MS2_count = 0, 0
     for tic_ in tic_list:
-        if tic_['MSlevel']==1:
-            MS1_count+=1
+        if tic_['MSlevel'] == 1:
+            MS1_count += 1
         else:
-            MS2_count+=1
-    count_all=len(tic_list)
-    print('1. 总数、一级和二级数量分别为：',count_all,MS1_count,MS2_count)
-    i=0
+            MS2_count += 1
+    count_all = len(tic_list)
+    print('1. Total count, MS1 count, and MS2 count are:', count_all, MS1_count, MS2_count)
+    i = 0
     id_list = []
     for one_tic in tic_list:
-        if one_tic['MSlevel']==1:
-            id=one_tic['ID']
-            end=id+4 if id+4<count_all else count_all
+        if one_tic['MSlevel'] == 1:
+            id = one_tic['ID']
+            end = id + 4 if id + 4 < count_all else count_all
 
-            if not [tic_list[id_]['MSlevel'] for id_ in range(id,end)]==[2,2,2,2]:
-                id_list.append(id-1)
-    print("2. 输出id后面不是跟4个的index（已经减1）：",id_list)
+            if not [tic_list[id_]['MSlevel'] for id_ in range(id, end)] == [2, 2, 2, 2]:
+                id_list.append(id - 1)
+    print("2. Output indices that are not followed by 4 MS2 spectra (already decremented by 1):", id_list)
 
-"""=============================
-数据生成
 """
-# 将26386按照 ‘文件名-能量-pos/neg.mzML’的格式生成文件列表--（仅使用于第一次），第二次文件名为 “{}-NCE{}-{}”
+=============================
+Data Generation
+"""
+# Generate file list in the format ‘filename-energy-pos/neg.mzML’ for 26386 -- (only used for the first time), the second time filename is “{}-NCE{}-{}”
 def get_filename_list(filepre_list):
     filename_list = []
-    ev_list = ['1', '10', '100', '15', '20', '25', '30', '35', '40', '50', '60','70', '80']
+    ev_list = ['1', '10', '100', '15', '20', '25', '30', '35', '40', '50', '60', '70', '80']
     for filepre in filepre_list:
         for ev in ev_list:
-            for tail in ['pos','neg']:
-                filename_list.append('{}-{}-{}'.format(filepre,ev,tail))
+            for tail in ['pos', 'neg']:
+                filename_list.append('{}-{}-{}'.format(filepre, ev, tail))
     return filename_list
 
-# 说明：生成一级图文件
-# 输入：temp_df 小印给的化合物列表，tic_MS1_df是tic_list中一级谱图列表
-# pos_neg是正负离子，MS1_2dict_file是一级谱图数据的二维字典，key是cas，内容是rt和intensity
-def make_MS1_data(tic_list,temp_df,tic_MS1_df,pos_neg,MS1_2dict_file):
+# Description: Generate MS1 data files
+# Input: temp_df - list of compounds provided by Xiao Yin; tic_MS1_df is the list of MS1 spectra from tic_list
+# pos_neg indicates positive or negative ionization; MS1_2dict_file is a two-dimensional dictionary for MS1 spectrum data, where the key is CAS and the content is rt and intensity
+def make_MS1_data(tic_list, temp_df, tic_MS1_df, pos_neg, MS1_2dict_file):
     if os.path.exists(MS1_2dict_file):
         MS1_2dict = read_pkl(MS1_2dict_file)
     else:
-        MS1_2dict={}
+        MS1_2dict = {}
         rt_list = []
-        # 先构建好字典         
+        # First, build the dictionary         
         for temp_index in temp_df.index:
-            cas = temp_df.loc[temp_index,'CAS No.']
-            MS1_2dict[cas] = {'rt':rt_list,'intensity':[]}
-        # 往字典中放数据
+            cas = temp_df.loc[temp_index, 'CAS No.']
+            MS1_2dict[cas] = {'rt': rt_list, 'intensity': []}
+        # Add data to the dictionary
         for tic_MS1_index in tic_MS1_df.index:
             tic_one_dict = tic_list[tic_MS1_index]
-            d_df= pd.DataFrame(tic_one_dict['peaks'],columns=['mass','intensity'])
+            d_df = pd.DataFrame(tic_one_dict['peaks'], columns=['mass', 'intensity'])
             rt_list.append(tic_one_dict['RT'])
             for i in temp_df.index:
-                cas = temp_df.loc[i,'CAS No.']
-                # 旧
-                # mz = temp_df.loc[i,'m/z-'+pos_neg]
-                # 240409修改
-                mz = temp_df.loc[i,'m/z']
+                cas = temp_df.loc[i, 'CAS No.']
+                # Old version
+                # mz = temp_df.loc[i, 'm/z-' + pos_neg]
+                # Modified on 240409
+                mz = temp_df.loc[i, 'm/z']
                 
-                filter_df = d_df[d_df['mass'].apply(lambda x: less_5ppm_true(abs(cal_ppm(mz,x))))]
+                filter_df = d_df[d_df['mass'].apply(lambda x: less_5ppm_true(abs(cal_ppm(mz, x))))]
                 if filter_df.shape[0] != 0:
                     MS1_2dict[cas]['intensity'].append(filter_df.sum()[1])
                 else:
                     MS1_2dict[cas]['intensity'].append(0)
-        to_pkl(MS1_2dict,MS1_2dict_file)
+        to_pkl(MS1_2dict, MS1_2dict_file)
     return MS1_2dict
 
-"""=============================
-数据计算
-5ppm改10ppm，只需要改这里就行，改5个数
 """
-# 计算ppm
-def cal_ppm(expected_value,real_value):
-    return (expected_value-real_value)/expected_value*1000000
+=============================
+Data Calculation
+Change 5ppm to 10ppm here, modify these 5 numbers
+"""
+# Calculate ppm
+def cal_ppm(expected_value, real_value):
+    return (expected_value - real_value) / expected_value * 1000000
 
-# 是否在 ±5ppm 以内
-# 说明：一级计算还用的是5ppm，二级用的10ppm，为了最大限度减少代码修改，增加less_5ppm_true方法，用于一级5ppm
+# Is it within ±5ppm?
+# Description: The first-level calculation uses 5ppm, while the second-level uses 10ppm. To minimize code changes, the less_5ppm_true method is added for first-level 5ppm.
 def less_5ppm_true(ppm_value):
-    return True if abs(ppm_value)<=5 else False
-def less_5ppm(ppm_value):
-    return True if abs(ppm_value)<=10 else False
-def less_10ppm(ppm_value):
-    return True if abs(ppm_value)<=10 else False
+    return True if abs(ppm_value) <= 5 else False
 
-# 计算理论mz上下限
-def get_mz_uplimit(expected_value,diff=10):
-    return expected_value+diff*expected_value/1000000
-def get_mz_lowlimit(expected_value,diff=10):
-    return expected_value-diff*expected_value/1000000
-def get_mz_range(expected_value,diff=10):
-    mz_up = get_mz_uplimit(expected_value,diff)
-    mz_low = get_mz_lowlimit(expected_value,diff)
-    return mz_low,mz_up
-# 矩阵加速
+def less_5ppm(ppm_value):
+    return True if abs(ppm_value) <= 10 else False
+
+def less_10ppm(ppm_value):
+    return True if abs(ppm_value) <= 10 else False
+
+# Calculate theoretical mz upper limit
+def get_mz_uplimit(expected_value, diff=10):
+    return expected_value + diff * expected_value / 1000000
+
+def get_mz_lowlimit(expected_value, diff=10):
+    return expected_value - diff * expected_value / 1000000
+
+def get_mz_range(expected_value, diff=10):
+    mz_up = get_mz_uplimit(expected_value, diff)
+    mz_low = get_mz_lowlimit(expected_value, diff)
+    return mz_low, mz_up
+
+# Matrix acceleration
 def get_mz_range_matrix(expected_values, diff=10):
     # Convert expected_values to a numpy array
     expected_values = np.array(expected_values)
@@ -242,208 +246,207 @@ def get_mz_range_matrix(expected_values, diff=10):
     mz_range_list = np.vstack((mz_low, mz_up)).T
     return mz_range_list.tolist()
 
-# 判断mz是否大于上下限，返回bool型的array数组，用于取代apply实现加速
-def mz_is_less5(data_Series,theo_mz):
-    mz_low,mz_up = get_mz_range(theo_mz)
-    return (data_Series.values >= mz_low)&(data_Series.values <= mz_up)
-# 判断df的某一列，在上下限之间
-def between_low_up(data_Series,low_,up_):
-    return (data_Series.values >= low_)&(data_Series.values <= up_)
-# 判断大于是否大于上限
-def mz_bigger_uplimit(expected_value,real_value):
+# Check if mz is greater than the limits, return a boolean array, used to replace apply for acceleration
+def mz_is_less5(data_Series, theo_mz):
+    mz_low, mz_up = get_mz_range(theo_mz)
+    return (data_Series.values >= mz_low) & (data_Series.values <= mz_up)
+
+# Check if a specific column in df is within the limits
+def between_low_up(data_Series, low_, up_):
+    return (data_Series.values >= low_) & (data_Series.values <= up_)
+
+# Check if greater than the upper limit
+def mz_bigger_uplimit(expected_value, real_value):
     mz_uplimit = get_mz_uplimit(expected_value)
     return real_value <= mz_uplimit
 
-"""=============================
-数据提取
+
+"""
+=============================
+Data Extraction
 """
 
-#说明：获取上下限
-#先生成阈值，找最小值，如果最小值<1%,取1%，如果最小值>1%,最小值/最大值+1%
+# Description: Get upper and lower limits
+# First generate a threshold; if the minimum value < 1%, take 1%; if the minimum value > 1%, take (min/max + 1%)
 def get_threshold(data_df):
-    min_ratio = (data_df['intensities_list'].min()-100) /data_df['intensities_list'].max()
-    if min_ratio<0.01:
+    min_ratio = (data_df['intensities_list'].min() - 100) / data_df['intensities_list'].max()
+    if min_ratio < 0.01:
         return 0.01
     else:
-        return min_ratio+0.01
-# 获取最大intentisy所在的区间
-def get_max_rt_limt(limit_2list,max_intensity_rt):
-    for low_,up_ in limit_2list:
-        if (low_<=max_intensity_rt<=up_):
-            return [low_,up_]
+        return min_ratio + 0.01
+
+# Get the range where the maximum intensity is located
+def get_max_rt_limit(limit_2list, max_intensity_rt):
+    for low_, up_ in limit_2list:
+        if (low_ <= max_intensity_rt <= up_):
+            return [low_, up_]
             break
             
-def get_rt_limit(rt_list,intensities_list,refer_rt=-1,name=""):
-    # 一级谱图
-    mz_RT_df = pd.DataFrame({'rt_list':rt_list,'intensities_list':intensities_list})
+def get_rt_limit(rt_list, intensities_list, refer_rt=-1, name=""):
+    # MS1 spectrum
+    mz_RT_df = pd.DataFrame({'rt_list': rt_list, 'intensities_list': intensities_list})
 
-    # 如果一级谱全为0，说明这个raw文件中，没有找到这个化合物
-    no0_df = mz_RT_df[mz_RT_df['intensities_list']!=0]
-    if no0_df.shape[0]==0:
-        explain = 'intensity全是0'
-        return [-1,-1],explain
+    # If all intensities are zero, it means this raw file did not find this compound
+    no0_df = mz_RT_df[mz_RT_df['intensities_list'] != 0]
+    if no0_df.shape[0] == 0:
+        explain = 'All intensities are 0'
+        return [-1, -1], explain
     
     no0_df = no0_df.reset_index(drop=True)
     max_intensity = no0_df['intensities_list'].max()
-    max_intensity_rt = no0_df[no0_df['intensities_list'] == max_intensity].iloc[0,0]
-    # print(max_intensity_rt)
-    
-    # 获取阈值
+    max_intensity_rt = no0_df[no0_df['intensities_list'] == max_intensity].iloc[0, 0]
+
+    # Get threshold
     threshold = get_threshold(no0_df)
     threshold_intensity = max_intensity * threshold
     
-    # 得到分段的df
-    threshold_df = mz_RT_df['intensities_list']>=threshold_intensity
-    # threshold_df = mz_RT_df['intensities_list']>0
+    # Create a segmented dataframe
+    threshold_df = mz_RT_df['intensities_list'] >= threshold_intensity
     threshold_diff = threshold_df.diff()
-    threshold_diff.loc[0]=True # 接入头尾
-    threshold_diff.loc[threshold_diff.shape[0]-1]=True
+    threshold_diff.loc[0] = True  # Include head and tail
+    threshold_diff.loc[threshold_diff.shape[0] - 1] = True
     mz_threshold_diff_df = mz_RT_df[threshold_diff]
     
-    # 数据分段，并获得上下限, 合并[(1,2),(3,4)] 和 [(2,3)]
+    # Segment data and get limits, merge [(1,2),(3,4)] and [(2,3)]
     limit_2list = list(zip(mz_threshold_diff_df.iloc[::2, 0], mz_threshold_diff_df.iloc[1::2, 0]))
     limit_2list.extend(list(zip(mz_threshold_diff_df.iloc[1::2, 0], mz_threshold_diff_df.iloc[2::2, 0])))
     limit_2list = sorted(limit_2list, key=lambda x: x[0])
-    # print(limit_2list)
-    # print('max_intensity_rt',max_intensity_rt)
-    lower_limit_rt,upper_limit_rt = [-1,-1]
-    explain=''
-    max_rt_low,max_rt_up = get_max_rt_limt(limit_2list,max_intensity_rt)
-    for low_,up_ in limit_2list:
+
+    lower_limit_rt, upper_limit_rt = [-1, -1]
+    explain = ''
+    max_rt_low, max_rt_up = get_max_rt_limit(limit_2list, max_intensity_rt)
+    for low_, up_ in limit_2list:
         
-        # 区间内的df
-        range_df = mz_RT_df[(mz_RT_df['rt_list']>=low_) & (mz_RT_df['rt_list']<=up_)]
-        # 判断区间是否全部小于最小阈值,不要当前区间。下面还有种情况，卡5e5
-        if (range_df.iloc[:-1,1]<threshold_intensity).all():
-            # print("全部小于阈值")
+        # Data within the range
+        range_df = mz_RT_df[(mz_RT_df['rt_list'] >= low_) & (mz_RT_df['rt_list'] <= up_)]
+        # Check if the range is all below the minimum threshold; skip current range
+        if (range_df.iloc[:-1, 1] < threshold_intensity).all():
             continue
         
-        # 有参考rt        
-        if (refer_rt!=-1):
-            # 峰宽是否超过60:
-            if (up_ - low_)>60:
-                # refer_rt 在最大intensity±20以内，取最大±20；否则取 refer_rt±20
-                if (max_intensity_rt-20<=refer_rt<=max_intensity_rt+20):
-                    lower_limit_rt,upper_limit_rt = max_intensity_rt-20,max_intensity_rt+20
-                    explain='峰宽 > 60, refer_rt在max±20以内'
+        # With reference rt        
+        if (refer_rt != -1):
+            # Peak width exceeds 60:
+            if (up_ - low_) > 60:
+                # If refer_rt is within ±20 of max intensity, take max ±20; otherwise take refer_rt ±20
+                if (max_intensity_rt - 20 <= refer_rt <= max_intensity_rt + 20):
+                    lower_limit_rt, upper_limit_rt = max_intensity_rt - 20, max_intensity_rt + 20
+                    explain = 'Peak width > 60, refer_rt is within max ±20'
                     break
                 else:
-                    lower_limit_rt,upper_limit_rt = refer_rt-20,refer_rt+20
-                    explain='峰宽 > 60, refer_rt在max以外，只选refer_rt的±20'
+                    lower_limit_rt, upper_limit_rt = refer_rt - 20, refer_rt + 20
+                    explain = 'Peak width > 60, refer_rt is outside max, only select refer_rt ±20'
                     break
             else:
-                # 峰宽小于60，找refer_rt和 max_intensity_rt 都在里面的区间；然后找refer_rt所在的区间；最后找最大intensity±12有rt的
-                if (low_<=refer_rt<=up_) & (low_<=max_intensity_rt<=up_):
-                    lower_limit_rt,upper_limit_rt = low_-6,up_+6
-                    explain='峰宽<60, refer_rt和max都在区间，区间±6'
+                # Peak width < 60, find the range that includes both refer_rt and max_intensity_rt; then find the range that contains refer_rt; finally find the range with max intensity ±12
+                if (low_ <= refer_rt <= up_) & (low_ <= max_intensity_rt <= up_):
+                    lower_limit_rt, upper_limit_rt = low_ - 6, up_ + 6
+                    explain = 'Peak width < 60, both refer_rt and max are in the range, range ±6'
                     break
-                elif (low_<=refer_rt<=up_) :
-                    # 最大在rt±6以内，用最大intensity所在的区间±6
-                    if (low_-6<=max_intensity_rt<=up_+6):
-                        lower_limit_rt,upper_limit_rt = max_rt_low-6,max_rt_up+6
-                        explain='峰宽<60, 只有refer_rt在区间,max在±6，取max区间的±6'
+                elif (low_ <= refer_rt <= up_):
+                    # If max is within rt ±6, use the range of max intensity ±6
+                    if (low_ - 6 <= max_intensity_rt <= up_ + 6):
+                        lower_limit_rt, upper_limit_rt = max_rt_low - 6, max_rt_up + 6
+                        explain = 'Peak width < 60, only refer_rt in the range, max within ±6, take max range ±6'
                         break
-                    # 当前区间的最大强度大于5e5
+                    # If the current range's maximum intensity is greater than 5e5
                     range_max_intensity = range_df['intensities_list'].max()
-                    if range_max_intensity>=5e5:
-                        # range_max_rt = range_df[range_df['intensities_list'] == range_max_intensity].iloc[0,0]
-                        lower_limit_rt,upper_limit_rt = low_-6,up_+6
-                        explain='峰宽<60, 只有refer_rt在区间,max不在±6,range_max>5e5，取当前区间±6'
+                    if range_max_intensity >= 5e5:
+                        lower_limit_rt, upper_limit_rt = low_ - 6, up_ + 6
+                        explain = 'Peak width < 60, only refer_rt in the range, max not within ±6, range_max > 5e5, take current range ±6'
                         break
-                elif (low_<=max_intensity_rt<=up_) :
-                    if (low_-6<refer_rt<up_+6):
-                        lower_limit_rt,upper_limit_rt = low_-6,up_+6
-                        explain='峰宽<60, max过滤，refer_rt在其±6以内，区间±6'
+                elif (low_ <= max_intensity_rt <= up_):
+                    if (low_ - 6 < refer_rt < up_ + 6):
+                        lower_limit_rt, upper_limit_rt = low_ - 6, up_ + 6
+                        explain = 'Peak width < 60, max filtered, refer_rt is within ±6, range ±6'
                         break
                     
-                
-        # 没有rt，直接从6-30中找
-        # if (refer_rt==-1) & (low_-12<=max_intensity_rt<=up_+12):
-        if (refer_rt==-1):
-            lower_limit_rt,upper_limit_rt = 6,30
-            explain='没有refer_rt，直接找6-30中间的'
+        # If no reference rt, directly look between 6 and 30
+        if (refer_rt == -1):
+            lower_limit_rt, upper_limit_rt = 6, 30
+            explain = 'No refer_rt, directly look for the middle between 6-30'
             break
                 
-    if ([lower_limit_rt,upper_limit_rt] == [-1,-1]):
-        # 3.23增加规则
-        if max_intensity>=1e6:
-            lower_limit_rt,upper_limit_rt = max_rt_low-6,max_rt_up+6
-            explain='没有找到区间，max大于1e6，直接max所在区间±6'
+    if ([lower_limit_rt, upper_limit_rt] == [-1, -1]):
+        # Additional rule added on 3.23
+        if max_intensity >= 1e6:
+            lower_limit_rt, upper_limit_rt = max_rt_low - 6, max_rt_up + 6
+            explain = 'No range found, max > 1e6, directly take max range ±6'
         else:
-            explain='彻底没找到'
-            return [-1,-1],explain
+            explain = 'Completely not found'
+            return [-1, -1], explain
 
-    return [lower_limit_rt,upper_limit_rt],explain
+    return [lower_limit_rt, upper_limit_rt], explain
 
 #=================
-#===最优谱图判断===
-#================
+#=== Optimal Spectrum Judgment ===
+#=================
 
-# 说明：获取当前质谱数据中的母离子峰，如果没有返回[-1,-1]
-# 输入：质谱数据，分子基本信息
-# 输出：[母离子质量,强度]
-def get_real_val(intensity_df,theo_mz):
-    # temp_df = intensity_df[intensity_df['Mass'].apply(lambda x:less_5ppm(cal_ppm(theo_mz,x)))]
-    temp_df = intensity_df[mz_is_less5(intensity_df['Mass'],theo_mz)]
+# Description: Get the parent ion peak from the current mass spectrometry data; return [-1,-1] if none
+# Input: mass spectrometry data, basic molecular information
+# Output: [parent ion mass, intensity]
+def get_real_val(intensity_df, theo_mz):
+    temp_df = intensity_df[mz_is_less5(intensity_df['Mass'], theo_mz)]
     
     if temp_df.empty:
-        return [-1,-1]
+        return [-1, -1]
     else:
-        temp_max=temp_df['Intensity'].max()
-        temp_max_df = temp_df[temp_df['Intensity']==temp_max]
-        return [temp_max_df.iloc[0,0],temp_max_df.iloc[0,1]]
-# 说明：获取基峰。返回[-1,-1]说明剔除上限峰以后数据空了
-# 输入：质谱数据，分子基本信息
-# 输出：[基峰质量,强度]
-def get_basepeak(data_df,theo_mz=""):
+        temp_max = temp_df['Intensity'].max()
+        temp_max_df = temp_df[temp_df['Intensity'] == temp_max]
+        return [temp_max_df.iloc[0, 0], temp_max_df.iloc[0, 1]]
+
+# Description: Get the base peak. Returns [-1,-1] if data is empty after removing upper limit peaks
+# Input: mass spectrometry data, basic molecular information
+# Output: [base peak mass, intensity]
+def get_basepeak(data_df, theo_mz=""):
     try:
         if theo_mz != "":
-            # 计算母离子峰的上限
+            # Calculate the upper limit of the parent ion peak
             mz_uplimit = get_mz_uplimit(theo_mz)
-            # 剔除超过上限的峰
-            data_df = data_df[data_df['Mass'].values<=mz_uplimit]
-        temp_max=data_df['Intensity'].max()
-        temp_df=data_df[data_df['Intensity']==temp_max]
-        return [temp_df.iloc[0,0],temp_df.iloc[0,1]]
+            # Remove peaks exceeding the upper limit
+            data_df = data_df[data_df['Mass'].values <= mz_uplimit]
+        temp_max = data_df['Intensity'].max()
+        temp_df = data_df[data_df['Intensity'] == temp_max]
+        return [temp_df.iloc[0, 0], temp_df.iloc[0, 1]]
     except Exception as e:
-        print('get_basepeak error:',e)
-        return [-1,-1]
-# 说明：判断基峰 Mass 是否合理
-# 基峰和母离子峰差值在4-13；19-25的不合理。 3.11日 改为(4-13,20-25)。12.13日 改 [3,13],[21,24]
-# 输出：[是否合理，差值]
-def basepeak_is_reasonable(molpeak_mass,basepeak_mass):
-    mass_dif=molpeak_mass-basepeak_mass
-    if(mass_dif<-1)|(mass_dif<=0.99999)|(3<=mass_dif<=13)|(21<=mass_dif<=24):
-        return [False,mass_dif]
+        print('get_basepeak error:', e)
+        return [-1, -1]
+
+# Description: Check if the base peak mass is reasonable
+# The difference between the base peak and parent ion peak should be in the range of 4-13; 19-25 is unreasonable. Updated on 3.11 to (4-13,20-25). Updated on 12.13 to [3,13],[21,24]
+# Output: [is reasonable, difference]
+def basepeak_is_reasonable(molpeak_mass, basepeak_mass):
+    mass_dif = molpeak_mass - basepeak_mass
+    if (mass_dif < -1) | (mass_dif <= 0.99999) | (3 <= mass_dif <= 13) | (21 <= mass_dif <= 24):
+        return [False, mass_dif]
     else:
-        return [True,mass_dif]
-# 说明：判断母离子峰是否大于基峰
-# 输入：母峰强度，基峰强度，阈值5%
-# 输出：[是否大于5%，百分比]
-def greater_base_5per(molpeak_intensity,basepeak_intnesity, Threshold):
-    percent=round(molpeak_intensity/basepeak_intnesity,4)*100
-    if percent >=Threshold:
-        return True,percent
+        return [True, mass_dif]
+
+# Description: Check if the molecular ion peak is greater than the base peak
+# Input: Molecular peak intensity, base peak intensity, threshold 5%
+# Output: [Is greater than 5%, percentage]
+def greater_base_5per(molpeak_intensity, basepeak_intensity, Threshold):
+    percent = round(molpeak_intensity / basepeak_intensity, 4) * 100
+    if percent >= Threshold:
+        return True, percent
     else:
-        return False,percent
-# 说明：计算碎片峰数量，强度大于指定基峰5%的峰
-# 输入：读取的每个质谱文件（两列，mass和Intensity），碎片峰的判断阈值
-# 输出：大于指定阈值的峰合集df
-def get_fragmentpeak_df(intensity_df,basepeak_intensity,Threshold,theo_mz):
-    fragmentpeak_df=intensity_df[(intensity_df['Intensity']/basepeak_intensity)*100>=Threshold]
-    # print('===')
-    # print(fragmentpeak_df)
-    # 去除不合理峰，用basepeak_is_reasonable方法
-    fragmentpeak_df = fragmentpeak_df[fragmentpeak_df['Mass'].apply(lambda x: basepeak_is_reasonable(theo_mz,x)).apply(lambda x: pd.Series(x))[0]]
+        return False, percent
+
+# Description: Calculate the number of fragment peaks with intensity greater than a specified percentage of the base peak
+# Input: Read each mass spectrometry file (two columns, mass and Intensity), threshold for fragment peaks
+# Output: DataFrame of peaks greater than the specified threshold
+def get_fragmentpeak_df(intensity_df, basepeak_intensity, Threshold, theo_mz):
+    fragmentpeak_df = intensity_df[(intensity_df['Intensity'] / basepeak_intensity) * 100 >= Threshold]
+    # Remove unreasonable peaks using basepeak_is_reasonable method
+    fragmentpeak_df = fragmentpeak_df[fragmentpeak_df['Mass'].apply(lambda x: basepeak_is_reasonable(theo_mz, x)).apply(lambda x: pd.Series(x))[0]]
     return fragmentpeak_df
 
-# 说明：碎片峰是否大于等于1
+# Description: Check if the number of fragment peaks is greater than or equal to 1
 def fragmentpeak_num_greater1(fragmentpeak_df):
-    return True if fragmentpeak_df.shape[0]>1 else False
+    return True if fragmentpeak_df.shape[0] > 1 else False
 
-# 说明：获取输入文件夹下 MS2的文件名
+# Description: Get the filenames of MS2 files in the input folder
 def get_ms2_file(foldername):
-    # 先判断文件夹是否存在
+    # First check if the folder exists
     if not os.path.exists(foldername):
         return -1
     ms2_filename_list = []
@@ -454,89 +457,85 @@ def get_ms2_file(foldername):
         return -1
     else:
         return ms2_filename_list
-    
-# 获取当前二级图中基峰的intensity，注意要删除大于母离子上限的峰
-# 输入文件路径
-def get_ms2_base(filepath,theo_mz):
+
+# Get the intensity of the base peak in the current MS2 graph, note to remove peaks greater than the molecular ion upper limit
+# Input file path
+def get_ms2_base(filepath, theo_mz):
     if not os.path.exists(filepath):
         return 0
     try:
-        ms2_data = pd.read_csv(filepath,index_col=0)
-        # 计算母离子峰的上限
+        ms2_data = pd.read_csv(filepath, index_col=0)
+        # Calculate the upper limit of the molecular ion peak
         mz_uplimit = get_mz_uplimit(theo_mz)
-        # 剔除超过上限的峰
-        ms2_data = ms2_data[ms2_data['Mass']<=mz_uplimit]
-        # return mzbatch.get_real_val(ms2_data,theo_mz)[1]
+        # Remove peaks that exceed the upper limit
+        ms2_data = ms2_data[ms2_data['Mass'] <= mz_uplimit]
     except Exception:
         print(filepath)
         return 0
     return get_basepeak(ms2_data)[1]
 
 """=============================
-相似度计算
+Similarity Calculation
 """
 from sklearn.metrics.pairwise import cosine_similarity
-def round_df(input_df,rate=10):
-    if input_df.shape[0]>0:
-        input_df['Mass']=round(input_df['Mass']*rate)
+
+# Description: Round DataFrame values
+def round_df(input_df, rate=10):
+    if input_df.shape[0] > 0:
+        input_df['Mass'] = round(input_df['Mass'] * rate)
         max_indexes = input_df.groupby(by=['Mass'])['Intensity'].idxmax()
         input_df = input_df.loc[max_indexes]
-        input_df['Mass']=input_df['Mass'].astype(int)
-        # input_df.set_index(['Mass'],inplace=True)
+        input_df['Mass'] = input_df['Mass'].astype(int)
         return input_df
     else:
-        input_df['Mass']=input_df['Mass'].astype(int)
+        input_df['Mass'] = input_df['Mass'].astype(int)
         return input_df
 
+# Description: Layered rounding of DataFrame values
 def layer_round_df(input_df):
-    input_low_df = input_df[input_df['Mass']<=100]
-    input_high_df = input_df[input_df['Mass']>100]
+    input_low_df = input_df[input_df['Mass'] <= 100]
+    input_high_df = input_df[input_df['Mass'] > 100]
 
-    input_low_df = round_df(input_low_df,1000)
-    input_high_df = round_df(input_high_df,100)
-    input_high_df = round_df(input_high_df,10)
+    input_low_df = round_df(input_low_df, 1000)
+    input_high_df = round_df(input_high_df, 100)
+    input_high_df = round_df(input_high_df, 10)
 
-    input_df = pd.concat([input_low_df,input_high_df])
-    # print(input_low_df)
-
+    input_df = pd.concat([input_low_df, input_high_df])
     return input_df
-# rate这个参数已经没用了
-def layer_read_data(filepath,mz,rate=10):
-    # data_df = pd.read_csv(filepath,index_col=0)
-    data_df = pd.read_csv(filepath,usecols=["Mass","Intensity"])
-    # 计算母离子峰的上限，并剔除超过上限的峰
+
+# Description: Read data from file with layered rounding
+def layer_read_data(filepath, mz, rate=10):
+    data_df = pd.read_csv(filepath, usecols=["Mass", "Intensity"])
+    # Calculate the upper limit of the molecular ion peak and remove peaks that exceed it
     mz_uplimit = get_mz_uplimit(mz)
-    data_df = data_df[data_df['Mass']<=mz_uplimit]
+    data_df = data_df[data_df['Mass'] <= mz_uplimit]
     
     data_df = layer_round_df(data_df)
-    # a_df.columns=['Mass','5300-03-8_35_pos1']
-    data_df.set_index(['Mass'],inplace=True)
+    data_df.set_index(['Mass'], inplace=True)
     return data_df
 
-# rate这个参数已经没用了
-def read_data(filepath,mz,rate=100):
-    # data_df = pd.read_csv(filepath,index_col=0)
-    data_df = pd.read_csv(filepath,usecols=["Mass","Intensity"])
-    # 计算母离子峰的上限，并剔除超过上限的峰
+# Description: Read data from file with rounding
+def read_data(filepath, mz, rate=100):
+    data_df = pd.read_csv(filepath, usecols=["Mass", "Intensity"])
+    # Calculate the upper limit of the molecular ion peak and remove peaks that exceed it
     mz_uplimit = get_mz_uplimit(mz)
-    data_df = data_df[data_df['Mass']<=mz_uplimit]
+    data_df = data_df[data_df['Mass'] <= mz_uplimit]
     
-    data_df = round_df(data_df,rate)
-    # a_df.columns=['Mass','5300-03-8_35_pos1']
-    data_df.set_index(['Mass'],inplace=True)
+    data_df = round_df(data_df, rate)
+    data_df.set_index(['Mass'], inplace=True)
     return data_df
 
-def change_data(data_df,mz):
-    # 计算母离子峰的上限，并剔除超过上限的峰
+# Description: Change data by applying upper limit and rounding
+def change_data(data_df, mz):
+    # Calculate the upper limit of the molecular ion peak and remove peaks that exceed it
     mz_uplimit = get_mz_uplimit(mz)
-    data_df = data_df[data_df['Mass']<=mz_uplimit]
+    data_df = data_df[data_df['Mass'] <= mz_uplimit]
     
     data_df = layer_round_df(data_df)
-    # a_df.columns=['Mass','5300-03-8_35_pos1']
-    data_df.set_index(['Mass'],inplace=True)
+    data_df.set_index(['Mass'], inplace=True)
     return data_df
 
-#======相似度计算======
+# ====== Similarity Calculation ======
 def fu_jaccard_similarity_matrix(X, Y=None):
     # If Y is None, use X for both arguments (i.e., compare all pairs within X)
     if Y is None:
@@ -558,6 +557,7 @@ def fu_jaccard_similarity_matrix(X, Y=None):
     jaccard_index = dot_product / denominator
     
     return jaccard_index
+
 
 import numpy as np
 from sklearn.utils import check_array
@@ -644,33 +644,30 @@ def entropy_similarity(x, y=None):
                     entropy_sim = entropy_similarity(x[i], y[j])
                     similarity_matrix[i, j] = entropy_sim
             return similarity_matrix
-
-#以下是-1列为未知物#
-#240802修改：增加熵相似度计算
-def cal_pos_sim(mz_filter_df, sim_method = "cosine"):
-    pos_sim_df = mz_filter_df[mz_filter_df[-1]!=0]
-    if pos_sim_df.shape[0]==0:
-        return [0 for i in range(pos_sim_df.shape[1]-1)]
+# The following is for the -1 column as an unknown substance #
+# Modification 240802: Added entropy similarity calculation
+def cal_pos_sim(mz_filter_df, sim_method="cosine"):
+    pos_sim_df = mz_filter_df[mz_filter_df[-1] != 0]
+    if pos_sim_df.shape[0] == 0:
+        return [0 for i in range(pos_sim_df.shape[1] - 1)]
     if sim_method == "cosine":
         pos_matrix = cosine_similarity(pos_sim_df.T)
     elif sim_method == "jaccard":
         pos_matrix = fu_jaccard_similarity_matrix(pos_sim_df.T)
     elif sim_method == "entropy":
         pos_matrix = entropy_similarity(pos_sim_df.T)
-    pos_sim_list = list(np.round(pos_matrix[0][1:],4))  
+    pos_sim_list = list(np.round(pos_matrix[0][1:], 4))
     return pos_sim_list
 
-
-
-#反向模式计算
-def cal_neg_sim(standard_ms2_df,mz_filter_df, sim_method = "cosine"):
+# Reverse mode calculation
+def cal_neg_sim(standard_ms2_df, mz_filter_df, sim_method="cosine"):
     standard_columns_list = list(standard_ms2_df.columns)
     neg_sim_list = []
     for temp_index in standard_columns_list:
-        temp_df = mz_filter_df.loc[:,[-1,temp_index]]
-        temp_df = temp_df[temp_df[temp_index]!=0]
-        # 有些二级图是空的,相似度取-1
-        if temp_df.shape[0]==0:
+        temp_df = mz_filter_df.loc[:, [-1, temp_index]]
+        temp_df = temp_df[temp_df[temp_index] != 0]
+        # Some MS2 graphs are empty, similarity is set to -1
+        if temp_df.shape[0] == 0:
             neg_sim_list.append(-1)
         else:
             if sim_method == "cosine":
@@ -679,12 +676,12 @@ def cal_neg_sim(standard_ms2_df,mz_filter_df, sim_method = "cosine"):
                 neg_sim_list.append(fu_jaccard_similarity_matrix(temp_df.T)[0][1])
             elif sim_method == "entropy":
                 neg_sim_list.append(entropy_similarity(temp_df.T)[0][1])
-    neg_sim_list = list(np.round(neg_sim_list,4))
+    neg_sim_list = list(np.round(neg_sim_list, 4))
     
     return neg_sim_list
 
-# 双边计算
-def cal_both_sim(mz_filter_df, sim_method = "cosine"):
+# Bilateral calculation
+def cal_both_sim(mz_filter_df, sim_method="cosine"):
     both_sim_df = mz_filter_df
     if sim_method == "cosine":
         both_matrix = cosine_similarity(both_sim_df.T)
@@ -692,22 +689,21 @@ def cal_both_sim(mz_filter_df, sim_method = "cosine"):
         both_matrix = fu_jaccard_similarity_matrix(both_sim_df.T)
     elif sim_method == "entropy":
         both_matrix = entropy_similarity(both_sim_df.T)
-    both_sim_list = list(np.round(both_matrix[0][1:],4))
+    both_sim_list = list(np.round(both_matrix[0][1:], 4))
     return both_sim_list
 
-
-# 转为相对丰度
+# Convert to relative abundance
 def to_relative_abundance(data_df):
-    # 找到每列的最大值
+    # Find the maximum value of each column
     max_values = data_df.max()
-    # 将每一列除以该列的最大值
+    # Divide each column by its maximum value
     result = data_df.div(max_values)
     return result
 
 """=============================
-绘图
+Plotting
 """
-# 绘制总离子流图
+# Draw Total Ion Chromatogram (TIC)
 def draw_tic(exp):
     tic = exp.calculateTIC()
     retention_times, intensities = tic.get_peaks()
@@ -717,53 +713,23 @@ def draw_tic(exp):
     plt.ylabel('intensity (cps)')
     plt.show()
 
-# 绘图
-# 输入：横坐标，纵坐标，标题，图类型（影响横纵轴标签），x标签范围，垂直的红线
-def plot_pic(x_list, y_list,title,pic_type,label_lim=None,rt_line_list=None):
-    title=str(title)
+# Plotting
+# Input: x-axis, y-axis, title, plot type (affects axis labels), x label range, vertical red lines
+def plot_pic(x_list, y_list, title, pic_type, label_lim=None, rt_line_list=None):
+    title = str(title)
     plt.plot(x_list, y_list)
 
     plt.title(title)
-    if pic_type=='rt':
-        xlabel,ylabel='time (s)','intensity (cps)'
-    elif pic_type=='mz':
-        xlabel,ylabel='mass','intensity'   
+    if pic_type == 'rt':
+        xlabel, ylabel = 'time (s)', 'intensity (cps)'
+    elif pic_type == 'mz':
+        xlabel, ylabel = 'mass', 'intensity'   
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     
     if label_lim is not None:
         plt.xlim(*label_lim)
     if rt_line_list is not None:
-        for rt_lint in rt_line_list:
-            plt.axvline(rt_lint,color='red')
+        for rt_line in rt_line_list:
+            plt.axvline(rt_line, color='red')
     plt.show()
-    
-"""=============================
-不用方法
-"""
-
-# 说明：（旧），根据生成一级谱，这个数据是没有归一化的，该方法不用了获取指定mz 5ppm以内的强度和保留时间
-# 输入：mzML文件读取内容exp，指定mz
-# 输出：一级谱图的绘制数据
-def getRT_intensity(exp,mz,MS1_file):
-    if os.path.exists(MS1_file):
-        mz_RT_df=pd.read_csv(MS1_file,index_col=0)
-        rt_list,intensities_list=mz_RT_df['rt_list'],mz_RT_df['intensities_list']
-    else:
-        rt_list= []
-        intensities_list=[]
-        for spec in exp:
-            if spec.getMSLevel() == 1:
-                mass_array,intensity_array=spec.get_peaks()
-                d_df=pd.DataFrame({'mass':mass_array,'intensity':intensity_array})
-                d_df=d_df[d_df['mass'].apply(lambda x: less_5ppm(abs(cal_ppm(mz,x))))]
-                rt_list.append(spec.getRT())
-                intensities_list.append(d_df.sum()[1])
-        # print(len(rt_list),len(intensities_list))
-                # for mass_, intensity_ in zip(*spec.get_peaks()):
-                #     if less_5ppm(abs(cal_ppm(mz,mass_))):
-                #         intensitie_list.append(intensity_)
-        # 保存到文件
-        mz_RT_df=pd.DataFrame({'rt_list':rt_list,'intensities_list':intensities_list})
-        # mz_RT_df.to_csv(MS1_file)
-    return rt_list, intensities_list
