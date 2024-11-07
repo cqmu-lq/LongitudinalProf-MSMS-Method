@@ -1,4 +1,4 @@
-# LongProf-MSMS-Method
+# LongitudinalProf-MSMS-Method
 ### Longitudinal Profiling of MS/MS Fragments for Metabolite Identification
 ### Preamble
 
