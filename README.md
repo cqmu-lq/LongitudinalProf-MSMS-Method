@@ -1,8 +1,7 @@
 # LongitudinalProf-MSMS-Method
-### Longitudinal Profiling of MS/MS Fragments for Metabolite Identification
-### Preamble
+## Preamble
 
-This repository contains the dataset and code for the paper titled "Longitudinal Profiling of MS/MS Fragments for Metabolite Identification". The project focuses on developing and validating methods for accurate metabolite identification using longitudinal profiling of MS/MS fragments.
+This repository contains the dataset and code for the paper titled "Longitudinal Profiling of MS/MS Fragments Improves Accuracy of Metabolite Identification". The project focuses on developing and validating methods for accurate metabolite identification using longitudinal profiling of MS/MS fragments.
 
 
 ## Code Availability
@@ -11,13 +10,13 @@ The code used in this study have been made accessible in this repository to ensu
 1. **src/code**: The Python code for implementing the longitudinal profiling method and performing the identification.
 
 ## Usage
-To utilize the LongProf-MSMS-Method and replicate the research results, please follow these steps:
+To utilize the LongitudinalProf-MSMS-Method and replicate the research results, please follow these steps:
 
 1. **Clone or Download the Repository**
 
    ```bash
-   git clone https://github.com/yourusername/LongProf-MSMS-Method.git
-   cd LongProf-MSMS-Method
+   git clone https://github.com/yourusername/LongitudinalProf-MSMS-Method.git
+   cd LongitudinalProf-MSMS-Method
 
 2. **Install Required Dependencies**
 
@@ -35,8 +34,8 @@ Run every cell of "src/code/longprof_msms_method.ipynb" in sequence in Jupyter N
 4. **Generate Results**
 
    ```bash
-   git clone https://github.com/yourusername/LongProf-MSMS-Method.git
-   cd LongProf-MSMS-Method
+   git clone https://github.com/yourusername/LongitudinalProf-MSMS-Method.git
+   cd LongitudinalProf-MSMS-Method
    
 ## Citation
 The citation of this work would be greatly appreciated if you find it valuable or choose to build upon it.
