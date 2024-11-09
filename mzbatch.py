@@ -10,6 +10,7 @@ import pymzml
 """=============================
 File Reading/Writing
 """
+
 # File copy
 import shutil
 def copyfile(infile, outfile):
@@ -127,6 +128,7 @@ def marge_data_fun(folder_path, qianzhui, begin_0, end_0, step_0, outfile):
         merged_data_df = pd.concat([merged_data_df, df], ignore_index=True)
     print(merged_data_df.shape, outfile)
     merged_data_df.to_excel(outfile, encoding='utf8')
+
 """
 =============================
 Data Checking
@@ -158,6 +160,7 @@ def check_data(tic_list):
 =============================
 Data Generation
 """
+
 # Generate file list in the format ‘filename-energy-pos/neg.mzML’ for 26386 -- (only used for the first time), the second time filename is “{}-NCE{}-{}”
 def get_filename_list(filepre_list):
     filename_list = []
@@ -206,6 +209,7 @@ def make_MS1_data(tic_list, temp_df, tic_MS1_df, pos_neg, MS1_2dict_file):
 Data Calculation
 Change 5ppm to 10ppm here, modify these 5 numbers
 """
+
 # Calculate ppm
 def cal_ppm(expected_value, real_value):
     return (expected_value - real_value) / expected_value * 1000000
@@ -703,6 +707,7 @@ def to_relative_abundance(data_df):
 """=============================
 Plotting
 """
+
 # Draw Total Ion Chromatogram (TIC)
 def draw_tic(exp):
     tic = exp.calculateTIC()
