@@ -1,13 +1,15 @@
 # LongitudinalProf-MSMS-Method
 ## Preamble
 
-This repository contains the dataset and code for the paper titled "Longitudinal Profiling of MS/MS Fragments Improves Accuracy of Metabolite Identification". The project focuses on developing and validating methods for accurate metabolite identification using longitudinal profiling of MS/MS fragments.
+This repository contains the code for the paper titled "Longitudinal Profiling of MS/MS Fragments Improves Accuracy of Metabolite Identification". The project focuses on developing and validating methods for accurate metabolite identification using longitudinal profiling of MS/MS fragments.
 
 
 ## Code Availability
 The code used in this study have been made accessible in this repository to ensure transparency and reproducibility of the findings. The following files are included:
 
-1. **src/code**: The Python code for implementing the longitudinal profiling method and performing the identification.
+1. 001-007.ipynb: This series of files includes key data processing steps, ranging from MS1 and MS/MS spectrum extraction, spectrum filtering, invalid fragment removal, fragment rationality assessment, CQMU database construction, isomer similarity calculations, to metabolite identification. These processes encompass data preprocessing, optimization, and selection, establishing a robust data foundation for subsequent analysis and metabolite identification.
+2. mzbatch.py: This file contains a library of commonly used methods for mass spectrometry data processing, offering modules for file operations, data validation, data generation, data calculation, and data extraction. This file is designed for quick access to essential functions within Python-based mass spectrometry data analysis projects, facilitating efficient data management and analysis.
+3. requirements.txt: This file lists all Python packages and their versions needed for this project.
 
 ## Usage
 To utilize the LongitudinalProf-MSMS-Method and replicate the research results, please follow these steps:
@@ -23,26 +25,18 @@ To utilize the LongitudinalProf-MSMS-Method and replicate the research results, 
    ```bash
    conda create -n longprof python=3.8.13
    conda activate longprof
-   pip install -r src/requirements.txt
+   pip install -r requirements.txt
 
-3. **Run the Code **
-Run every cell of "src/code/longprof_msms_method.ipynb" in sequence in Jupyter Notebook. Make sure that the data set is stored in the same path as specified in the script.
+3. **Run the Code**
+Run every cell of "001-007.ipynb" in sequence in Jupyter Notebook. Make sure that the data set is stored in the same path as specified in the script.  
 
-   ```bash
-   jupyter notebook src/code/longprof_msms_method.ipynb
-
-4. **Generate Results**
-
-   ```bash
-   git clone https://github.com/yourusername/LongitudinalProf-MSMS-Method.git
-   cd LongitudinalProf-MSMS-Method
    
 ## Citation
 The citation of this work would be greatly appreciated if you find it valuable or choose to build upon it.
 
 
 ## Contact
-For any inquiries or questions regarding this research or its code, please feel free to contact Jianbo Pan at panjianbo@cqmu.edu.cn.
+For any inquiries or questions regarding this research or its code, please feel free to contact Jun-Yan Liu at jyliu@cqmu.edu.cn.
 
 
 ## Copyright License
