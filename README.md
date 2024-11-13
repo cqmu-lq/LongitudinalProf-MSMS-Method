@@ -7,7 +7,7 @@ This repository contains the code for the paper titled "Longitudinal Profiling o
 ## Code Availability
 The code used in this study have been made accessible in this repository to ensure transparency and reproducibility of the findings. The following files are included:
 
-1. 001-008.ipynb: This series of files includes key data processing steps, ranging from MS1 and MS/MS spectrum extraction, spectrum filtering, invalid fragment removal, fragment rationality assessment, CQMU database construction, isomer similarity calculations, to metabolite identification. These processes encompass data preprocessing, optimization, and selection, establishing a robust data foundation for subsequent analysis and metabolite identification.
+1. 001-007.ipynb: This series of files includes key data processing steps, ranging from MS1 and MS/MS spectrum extraction, spectrum filtering, invalid fragment removal, fragment rationality assessment, CQMU database construction, isomer similarity calculations, to metabolite identification. These processes encompass data preprocessing, optimization, and selection, establishing a robust data foundation for subsequent analysis and metabolite identification.
 2. mzbatch.py: This file contains a library of commonly used methods for mass spectrometry data processing, offering modules for file operations, data validation, data generation, data calculation, and data extraction. This file is designed for quick access to essential functions within Python-based mass spectrometry data analysis projects, facilitating efficient data management and analysis.
 3. requirements.txt: This file lists all Python packages and their versions needed for this project.
 
@@ -28,7 +28,7 @@ To utilize the LongitudinalProf-MSMS-Method and replicate the research results, 
    pip install -r requirements.txt
 
 3. **Run the Code**
-Run every cell of "001-008.ipynb" in sequence in Jupyter Notebook. Make sure that the data set is stored in the same path as specified in the script.  
+Run every cell of "001-007.ipynb" in sequence in Jupyter Notebook. Make sure that the data set is stored in the same path as specified in the script.  
 
    
 ## Citation
